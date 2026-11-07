@@ -6,6 +6,10 @@ through [GalaxyBudsClient](https://github.com/timschneeb/GalaxyBudsClient).
 GalaxyBudsClient remains the only owner of the Buds protocol connection. This
 plugin does not open Bluetooth or RFCOMM itself.
 
+This fork of [Damian Galarza’s Omarchy Buds](https://github.com/dgalarza/omarchy-buds)
+adds panel disconnect handling and a shared status service across monitors.
+The original MIT license and attribution are preserved.
+
 ## Preview
 
 <img src="preview.png" alt="Omarchy Buds panel showing battery levels and earbud controls" width="400">
@@ -44,7 +48,7 @@ Quickshell 0.3.0, and GalaxyBudsClient 5.2.1.
 Clone the plugin through Omarchy without enabling it yet:
 
 ```bash
-omarchy plugin add https://github.com/dgalarza/omarchy-buds.git
+omarchy plugin add https://github.com/agrippa1027/omarchy-buds.git
 ```
 
 Install the status hook:
@@ -98,7 +102,10 @@ The hook restricts the state directory to the current user (`0700`) and the
 snapshot to user read/write access (`0600`).
 
 `BarWidget.qml` owns the bar icon and forwards the standard panel lifecycle to
-`Panel.qml`. `Service.qml` watches the status file with Quickshell `FileView`.
+`Panel.qml`. All panels use the single `Service.qml` instance managed by Omarchy,
+including across monitors. Their fallback views have file watching, timers,
+and background processes disabled. Omarchy unloads the service when the plugin
+is disabled. `Service.qml` watches the status file with Quickshell `FileView`.
 It also checks that GalaxyBudsClient still owns `me.timschneeberger.GalaxyBudsClient` on the user
 bus and matches the bus owner's process ID to the snapshot writer. A bus owner
 change triggers an immediate check; a 30-second poll is retained as a recovery
@@ -153,6 +160,19 @@ Keys for unsupported or unavailable actions do nothing. There is no Adaptive
 shortcut.
 
 ## Troubleshooting
+
+**The shell crashes when the earbuds disconnect**
+
+The plugin closes an open panel on disconnect or loss of the client, resets
+keyboard selection, and keeps its icon anchor present until the panel closes.
+It keeps its status service loaded so reconnecting does not recreate it.
+
+A disconnect can also trigger a separate native Quickshell PipeWire crash.
+On Quickshell `0.3.2.r7.g2b4501a-1`, a crash captured on 2026-11-07 showed
+an audio node being rebound after Quickshell cleared its PipeWire registry.
+This plugin does not import PipeWire or own audio nodes; its panel lifecycle
+handling cannot prevent that native crash. Do not treat these changes as a
+fix for Quickshell's audio engine.
 
 **The icon is absent**
 
@@ -213,6 +233,7 @@ deno run --allow-read tests/model.test.js
 deno run --allow-read tests/plugin-contract.test.js
 deno run --allow-read tests/hook-contract.test.js
 deno run --allow-read tests/service-contract.test.js
+python tests/shared-state.py
 dotnet run --project tests/hook/HookTests.csproj
 bash -n setup
 qmllint -I /usr/share/omarchy/shell BarWidget.qml Panel.qml Service.qml GalaxyBudsIcon.qml

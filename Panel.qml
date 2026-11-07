@@ -16,6 +16,11 @@ Panel {
   property var hostWidget: null
   property int cursorIndex: 0
   property bool cursorActive: false
+  readonly property var sharedService: bar && bar.shell
+    ? bar.shell.serviceFor(moduleName) : null
+  readonly property var buds: sharedService || inactiveService
+  // A passive view keeps bindings valid while the host loads/unloads its service.
+  Service { id: inactiveService; active: false }
 
   readonly property var barIdentity: hostWidget || root
   readonly property bool connected: buds.connected
@@ -152,9 +157,24 @@ Panel {
     buds.refresh()
   }
 
-  Service {
-    id: buds
-    settings: root.settings
+  // Status can disappear while a control has focus or the widget is hiding.
+  // Close after status bindings settle, and cancel if the device reconnects
+  // before the next event-loop turn. Keep the service loaded for reconnects.
+  onConnectedChanged: {
+    if (connected) disconnectClose.stop()
+    else disconnectClose.restart()
+  }
+
+  Timer {
+    id: disconnectClose
+    interval: 0
+    repeat: false
+    onTriggered: {
+      if (root.connected) return
+      root.close()
+      root.cursorIndex = 0
+      root.cursorActive = false
+    }
   }
 
   KeyboardPanel {

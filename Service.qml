@@ -9,7 +9,7 @@ import "Model.js" as Model
 Item {
   id: root
 
-  property var settings: ({})
+  property bool active: true
   property var status: Model.defaultStatus()
   property bool statusFilePresent: false
   property bool clientRunning: false
@@ -59,6 +59,7 @@ Item {
   }
 
   function probeClient() {
+    if (!active) return
     if (clientProbe.running) {
       deferredClientProbe.restart()
       return
@@ -67,6 +68,7 @@ Item {
   }
 
   function refresh() {
+    if (!active) return
     stateFile.reload()
     probeClient()
   }
@@ -120,8 +122,8 @@ Item {
 
   FileView {
     id: stateFile
-    path: root.statePath
-    watchChanges: true
+    path: root.active ? root.statePath : ""
+    watchChanges: root.active
     printErrors: false
     // Atomic replacement can emit before FileView's text cache changes.
     onFileChanged: reload()
@@ -146,7 +148,7 @@ Item {
 
   Process {
     id: clientOwnerMonitor
-    running: true
+    running: root.active
     command: [
       "busctl", "--user",
       "--match=type='signal',sender='org.freedesktop.DBus',interface='org.freedesktop.DBus',member='NameOwnerChanged',arg0='me.timschneeberger.GalaxyBudsClient'",
@@ -168,7 +170,7 @@ Item {
     id: clientOwnerMonitorRestart
     interval: 5000
     repeat: false
-    onTriggered: if (!clientOwnerMonitor.running) clientOwnerMonitor.running = true
+    onTriggered: if (root.active && !clientOwnerMonitor.running) clientOwnerMonitor.running = true
   }
 
   Timer {
@@ -181,7 +183,7 @@ Item {
   Timer {
     interval: 30000
     repeat: true
-    running: true
+    running: root.active
     triggeredOnStart: true
     onTriggered: root.probeClient()
   }

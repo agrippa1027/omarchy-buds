@@ -19,8 +19,9 @@ check("manifest uses the permanent plugin ID",
 check("manifest uses the distinct public name",
   manifest.name === "Omarchy Buds"
   && manifest.barWidget?.displayName === "Omarchy Buds")
-check("manifest declares one bar-widget kind",
-  JSON.stringify(manifest.kinds) === JSON.stringify(["bar-widget"]))
+check("manifest declares a bar widget and shared service",
+  JSON.stringify(manifest.kinds) === JSON.stringify(["bar-widget", "service"])
+  && manifest.entryPoints.service === "Service.qml")
 check("manifest loads BarWidget.qml",
   manifest.entryPoints?.barWidget === "BarWidget.qml")
 check("bar entry point uses BarWidget", /\bBarWidget\s*\{/.test(barWidget))

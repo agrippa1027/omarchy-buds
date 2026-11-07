@@ -45,7 +45,8 @@ BarWidget {
     target.hostWidget = root
   }
 
-  visible: panelLoader.item && (!hideWhenDisconnected || connected)
+  // Let the panel release its anchor before hiding a disconnected widget.
+  visible: panelLoader.item && (!hideWhenDisconnected || connected || opened || popoutSwitchClosing)
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
